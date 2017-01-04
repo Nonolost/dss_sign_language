@@ -1,20 +1,27 @@
+import os
+import numpy as np
 # This file contains the three methods that will allow to go from numerical data to symbolic data
+
+# TODO : lets make sax on derivate to get something looking like the home-made
+# New parameter for sax : vary the distance between two horizontal separation in sax/set-based
+# TODO : function that call every function with different parameters
+# TODO : SAX pour les doigts faire avec le nb de valeurs différentes, pour x y z essayer de trouver des positions clés pour séparer là, et orientation main?
+
+
 
 # The home made function take into argument a file with numerical data and will convert it into symbolic data in an output file
 # In this version, we will take values 3 by 3 and if these values varied outside of a defined threshold, we apply the I (incrementation), D (decrementation).
 # If not, we label it C (Constant)
-def home_made(input_file, output_file, gap, nb):
+def home_made(input_file, output_file, gap):
 	dict_values = from_file_to_dict(input_file)
 
 	new_dict_values = dict()
 
 	for key, values in dict_values.items():
 		new_dict_values[key] = []
-		last = []
 		for idx, value in enumerate(values):
-			last.append(value)
-			if len(last) == nb:
-				diff = last[nb-1]-last[0]
+			if idx != 1 and idx != len(values)-1:
+				diff = values[idx+1]-values[idx-1]
 				if abs(diff) < gap:
 					new_dict_values[key].append('C')
 				elif diff > 0:
@@ -22,7 +29,6 @@ def home_made(input_file, output_file, gap, nb):
 				else:
 					new_dict_values[key].append('D')
 
-				del last[:]
 
 	from_dict_to_file(output_file, new_dict_values)
 
@@ -45,7 +51,7 @@ def set_based(input_file, output_file, height, width):
 
 	height_gap = 2/height
 	width_gap = 30/width
-	letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R']
+	letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y']
 
 	for key, values in dict_values.items():
 		for idx, value in enumerate(values):
@@ -85,6 +91,18 @@ def from_dict_to_file(output_file, values):
 
 	file.close
 
-set_based("data/girl_10.dat", "data/test_set.dat", 4, 3)
-home_made("data/girl_10.dat", "data/test_hm.dat", 0.2, 3)
-sax("data/girl_10.dat", "data/test_sax.dat", 4)
+if __name__ == "__main__":
+    # Here we're going to generate all the data for sax, derivated sax, set-based and home-made for all our dataset and for different parameters
+
+    # sax :	
+	for file in os.listdir("data"):
+		if file.endswith(".dat"):
+			for i in range(1,6):
+				sax("data/" + file, "data/sax/" + file.replace(".dat", "") + "_sax_" + str(i) + ".dat", i)
+
+			for i in np.arange(0.05,0.5,0.05):
+				home_made("data/" + file,  "data/hm/" + file.replace(".dat", "") + "_hm_" + str(i) + ".dat", i)
+
+			for i in range(1,5):
+				for j in range(1,5):
+					set_based("data/" + file,  "data/set_based/" + file.replace(".dat", "") + "_setbased_" + str(i) + "_" + str(j) + ".dat", i, j)
