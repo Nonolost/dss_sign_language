@@ -36,7 +36,7 @@ def home_made(input_file, output_file, gap):
 
 	from_dict_to_file(output_file, new_dict_values)
 
-def sax(input_file, output_file, height):
+def sax(input_file, output_file, height, diffs=[]):
 	"""
 	This function is a simplified use of the SAX method to transform numerical data into symbolic one. 
 	See http://cs.gmu.edu/~jessica/SAX_DAMI_preprint.pdf for details
@@ -48,12 +48,36 @@ def sax(input_file, output_file, height):
 	"""
 	dict_values = from_file_to_dict(input_file)
 
-	gap = 2/height
+	
+
 	letters = ['A','B','C','D','E','F','G','H','I','J','K']
+	heights = [9,9,5,8,8,6,6,6]
 
 	for key, values in dict_values.items():
+		if key<=3:
+			base = 2
+			add = 1
+		else:
+			base = 0.751
+			add = 0
+
+		if len(diffs) == 0:
+			gap = base/(heights[key]+1)#gap = base/(height+1)
+		else:
+			tot = 0
+			gap = []
+			for idx, el in enumerate(diffs):
+				tot += el
+				gap.append(base*tot)
+
 		for idx, value in enumerate(values):
-			dict_values[key][idx] = letters[int((value+1)/gap)]
+			if len(diffs) > 0:
+				for idx2, a in enumerate(gap):
+					if (value+add)<a:
+						dict_values[key][idx] = letters[idx2]
+						break
+			else:
+				dict_values[key][idx] = letters[int((value+add)/gap)]
 
 	from_dict_to_file(output_file, dict_values)
 
@@ -96,7 +120,7 @@ def sax_derivate(input_file, output_file, height):
 	from_dict_to_file(output_file, new_dict_values)
 
 
-def set_based(input_file, output_file, height, width):
+def set_based(input_file, output_file, height, width, diffs=[]):
 	"""
 	This function is a simplified use of the Set-based method to transform numerical data into symbolic one. 
 	See http://dl.acm.org/citation.cfm?id=2882963 for details
@@ -109,13 +133,38 @@ def set_based(input_file, output_file, height, width):
 	"""
 	dict_values = from_file_to_dict(input_file)
 
-	height_gap = 2/height
+	
+
 	width_gap = 30/width
 	letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y']
 
 	for key, values in dict_values.items():
+
+		if key<=3:
+			base = 2
+			add = 1
+		else:
+			base = 0.75
+			add = 0
+
+		height_gap = 2/height
+		if len(diffs) == 0:
+			height_gap = 2/height
+		else:
+			tot = 0
+			height_gap = []
+			for idx, el in enumerate(diffs):
+				tot += el
+				height_gap.append(base*tot)
+
 		for idx, value in enumerate(values):
-			dict_values[key][idx] = letters[int(idx/width_gap)*width + int((value+1)/height_gap)]
+			if len(diffs) > 0:
+				for idx2, a in enumerate(height_gap):
+					if (value+base)<a:
+						dict_values[key][idx] = letters[int(idx/width_gap)*width + idx2]
+						break
+			else:
+				dict_values[key][idx] = letters[int(idx/width_gap)*width + int((value+base)/height_gap)]
 
 	from_dict_to_file(output_file, dict_values)
 
@@ -166,19 +215,24 @@ if __name__ == "__main__":
 	if len(sys.argv) > 1:
 		for file in os.listdir("data"):
 			if file.endswith(".dat"):
-				for i in range(1,6):
+				for i in range(1,10):
 					if "sax" in sys.argv:
 						sax("data/" + file, "data/sax/" + file.replace(".dat", "") + "_sax_" + str(i) + ".dat", i)
 					if "sax_der" in sys.argv:
 						sax_derivate("data/" + file, "data/sax_derivate/" + file.replace(".dat", "") + "_sax_derivate_" + str(i) + ".dat", i)
 
 				if "home" in sys.argv:
-					for i in np.arange(0.05,0.5,0.05):
+					for i in np.arange(0.05,0.25,0.05):
 						home_made("data/" + file,  "data/hm/" + file.replace(".dat", "") + "_hm_" + str(i) + ".dat", i)
 
 				if "set" in sys.argv:
-					for i in range(1,5):
-						for j in range(1,5):
-							set_based("data/" + file,  "data/set_based/" + file.replace(".dat", "") + "_setbased_" + str(i) + "_" + str(j) + ".dat", i, j)
+					cpt = 0
+					for i in range(2,5):
+						for j in range(2,5):
+							cpt+=1
+							set_based("data/" + file,  "data/set_based/" + file.replace(".dat", "") + "_setbased_" + str(cpt) + ".dat", i, j)
 	else:
 		print("Too few arugments, enter at least one of those : python symbolic.py [sax] [sax_der] [home] [set]")
+
+#sax("data/come_1.dat", "data/sax_aaaaaaaaatest_.dat", 1, [0.6,0.4])
+#set_based("data/come_1.dat", "data/set_aaaaaaaaatest_.dat", 2, 2, [0.6,0.4])
