@@ -70,21 +70,29 @@ def counting1(seq,words_grams,word,n_max,param):
 			words_grams[param][word][i]["nombre"] +=1
 
 			
-def evaluate_word8(seq_grams,seq_prefx,words_grams,word,n):
-	if i == 1:
+def evaluate_word8(seq_grams,seq_prefx,words_grams8,word,n):
+	if n == 1:
 		return
 	else:
-		P = 1
-		for i in range(0,len(seq_grams)):
-			if (seq_grams[i] in words_grams[word][n]):
-				if (seq_prefx[i] in words_grams[word][n-1]):
-					Ps = words_grams[word][n][seq_grams[i]]
-					Pp = words_grams[word][n-1][seq_prefx[i]]
-					Pg = Ps/Pp
-				else:
-					Pg = 1/words_grams[word][n-1]["nombre"]
+		if seq_grams[0] in words_grams8[word][1]:
+			P = words_grams8[word][1][seq_grams[0]]
+		else:
+			P = 1/(words_grams8[word][1]["nombre"])
+		Pp = 1
+		Ps = 0
+		Pg = 0
+		for i in range(1,len(seq_grams)):
+			#print(str(i) + " " +seq_grams[i])
+			l = len(seq_grams[i])
+			if (seq_grams[i] in words_grams8[word][l]):
+				Ps = words_grams8[word][l][seq_grams[i]]+1
+				Pp = words_grams8[word][l-1][seq_prefx[i]]+10
+				Pg = Ps/Pp
 			else:
-				Pg = 1/words_grams[word][n]["nombre"]
+				if (seq_prefx[i] in words_grams8[word][l-1]):
+					Pg = 1/(words_grams8[word][l-1][seq_prefx[i]]+10)
+				else:
+					Pg = 1/(words_grams8[word][l-1]["nombre"]+10)
 			P *= Pg
 		return P
 
@@ -101,7 +109,7 @@ def evaluate_word1(seq_grams,seq_prefx,words_grams,word,n,param):
 		Pg = 0
 		for i in range(1,len(seq_grams)):
 			#print(str(i) + " " +seq_grams[i])
-			l = len(seq_grams[i])
+			l = len(seq_grams[i])/8
 			if (seq_grams[i] in words_grams[param][word][l]):
 				Ps = words_grams[param][word][l][seq_grams[i]]+1
 				Pp = words_grams[param][word][l-1][seq_prefx[i]]+10
@@ -114,23 +122,37 @@ def evaluate_word1(seq_grams,seq_prefx,words_grams,word,n,param):
 			P *= Pg
 		return P
 
-def evaluating8(seq,words_grams,n):
+def evaluating8(seq,words_grams8,n):
 	seq_grams = []
 	seq_prefx = []
-	for i in range(0,len(seq)-n+1):
+	gram = seq[0]
+	prefx = ""
+	seq_grams.append(gram)
+	seq_prefx.append(prefx)
+	i=0
+	for i in range(1,n-1):
+		gram += seq[i]
+		prefx += seq[i-1]
+		#print(str(i) + " " +gram + " " + prefx)
+		seq_grams.append(gram)
+		seq_prefx.append(prefx)
+	for k in range(0,len(seq)-n+1):
 		seq_grams.append("")
 		seq_prefx.append("")
 		for j in range(0,n):
-			seq_grams[i] += seq[i+j]
+			seq_grams[k+i+1] += seq[k+j]
 			if j != n-1:
-				seq_prefx[i] += seq[i+j]
+				seq_prefx[k+i+1] += seq[k+j]
 	maxP = 0
 	bestW = ""
-	for word in words_grams:
-		P = evaluate_word8(seq_grams,seq_prefx,words_grams,word,n)
+	for word in words_grams[0]:
+		P = evaluate_word1(seq_grams,seq_prefx,words_grams8,word,n)
+		#print(str(P)+" "+word)
 		if P > maxP :
 			maxP = P
 			bestW = word
+	#print(bestW)
+	#print(str(maxP))
 	return bestW
 
 		
@@ -220,6 +242,36 @@ def create_filenames(words,protocol,k):
 			filenames.append((filename_in,word))
 			filename_in = ""
 	return filenames
+
+def exe8(words,k,n,protocol):
+	filenames = create_filenames(words,protocol,k)
+	cross_list = {}
+	for i in range(0,10):
+		cross_list[i] = []
+		for j in range(0,20):
+			pos = random.randrange(200 - i*20 - j)
+			(file,word) = filenames.pop(pos)
+			cross_list[i].append((file,word))
+	words_grams8	= {}
+	filenames = create_filenames(words,protocol,k)
+	words_grams8 = reset_grams8(words,n)
+	results = {}
+	for i in range(0,10):
+		results[i] = {}
+		for j in range(0,200):
+			if filenames[j] not in cross_list[i]:
+				(filename,word) = filenames[j]
+				seq = read_seq1(filename)
+				counting8(seq,words_grams8,word,n+1,l)
+		for j in range(0,20):
+			results[i][j] = {}
+			(filename,word)= cross_list[i][j]
+			results[i][j]["original"] = word
+			seq = read_seq8(filename)
+			bestW = evaluating1(seq,words_grams8,n,l)
+			results[i][j]["resultat"] = bestW			
+		words_grams8 = reset_grams8(words,n)
+	return results
 	
 def exe(words,k,n,protocol):
 	filenames = create_filenames(words,protocol,k)
@@ -250,7 +302,7 @@ def exe(words,k,n,protocol):
 			for l in range(0,8):
 				bestW = evaluating1(seq8[l],words_grams,n,l)
 				results[i][j][l] = bestW			
-		reset_grams(words,n)
+		words_grams = reset_grams(words,n)
 	return results
 	
 
