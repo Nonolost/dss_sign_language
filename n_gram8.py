@@ -47,7 +47,7 @@ def read_seq1(filename_in):
 	
 def counting8(seq,words_grams,word,n_max):
 	for i in range(0,n_max):
-		for j in range(0,len(seq)-i):
+		for j in range(0,len(seq)-i+1):
 			gram = ""
 			for k in range(0,i):
 				gram += seq[j+k]
@@ -59,7 +59,7 @@ def counting8(seq,words_grams,word,n_max):
 			
 def counting1(seq,words_grams,word,n_max,param):
 	for i in range(0,n_max):
-		for j in range(0,len(seq)-i):
+		for j in range(0,len(seq)-i+1):
 			gram = ""
 			for k in range(0,i):
 				gram += seq[j+k]
@@ -92,30 +92,32 @@ def evaluate_word1(seq_grams,seq_prefx,words_grams,word,n,param):
 	if n == 1:
 		return
 	else:
-		P = 1
+		if seq_grams[0] in words_grams[param][word][1]:
+			P = words_grams[param][word][1][seq_grams[0]]
+		else:
+			P = 1/(words_grams[param][word][1]["nombre"])
 		Pp = 1
 		Ps = 0
-		Pg =1
-		for i in range(0,len(seq_grams)):
-			#if i == 0:
-				#print(seq_grams[i])
-				#print_dic(words_grams[param][word][n])
-			if (seq_grams[i] in words_grams[param][word][n]):
-				if (seq_prefx[i] in words_grams[param][word][n-1]):
-					Ps = words_grams[param][word][n][seq_grams[i]]
-					Pp = words_grams[param][word][n-1][seq_prefx[i]]
-					Pg = Ps/Pp
-				else:
-					Pg = 1/words_grams[param][word][n-1]["nombre"]
+		Pg = 0
+		for i in range(1,len(seq_grams)):
+			#print(str(i) + " " +seq_grams[i])
+			l = len(seq_grams[i])
+			if (seq_grams[i] in words_grams[param][word][l]):
+				Ps = words_grams[param][word][l][seq_grams[i]]+1
+				Pp = words_grams[param][word][l-1][seq_prefx[i]]+10
+				Pg = Ps/Pp
 			else:
-				Pg = 1/(words_grams[param][word][n]["nombre"]+1)
+				if (seq_prefx[i] in words_grams[param][word][l-1]):
+					Pg = 1/(words_grams[param][word][l-1][seq_prefx[i]]+10)
+				else:
+					Pg = 1/(words_grams[param][word][l-1]["nombre"]+10)
 			P *= Pg
 		return P
 
 def evaluating8(seq,words_grams,n):
 	seq_grams = []
 	seq_prefx = []
-	for i in range(0,len(seq)-n):
+	for i in range(0,len(seq)-n+1):
 		seq_grams.append("")
 		seq_prefx.append("")
 		for j in range(0,n):
@@ -135,13 +137,24 @@ def evaluating8(seq,words_grams,n):
 def evaluating1(seq,words_grams,n,param):
 	seq_grams = []
 	seq_prefx = []
-	for i in range(0,len(seq)-n):
+	gram = seq[0]
+	prefx = ""
+	seq_grams.append(gram)
+	seq_prefx.append(prefx)
+	i=0
+	for i in range(1,n-1):
+		gram += seq[i]
+		prefx += seq[i-1]
+		#print(str(i) + " " +gram + " " + prefx)
+		seq_grams.append(gram)
+		seq_prefx.append(prefx)
+	for k in range(0,len(seq)-n+1):
 		seq_grams.append("")
 		seq_prefx.append("")
 		for j in range(0,n):
-			seq_grams[i] += seq[i+j]
+			seq_grams[k+i+1] += seq[k+j]
 			if j != n-1:
-				seq_prefx[i] += seq[i+j]
+				seq_prefx[k+i+1] += seq[k+j]
 	maxP = 0
 	bestW = ""
 	for word in words_grams[0]:
@@ -170,11 +183,19 @@ def voting(seq8,words_grams,n):
 			maxC = words_returned[word]
 			bestW = word
 		elif words_returned[word]==maxC:
-			bestW = "eq " + "bestW" + word
+			bestW = "eq " + bestW + " " + word
 	return bestW
 		
-
-def reset_grams(words_grams,words,n):
+def reset_grams8(words,n):
+	words_grams8	= {}
+	for word in words:
+		words_grams8[word] = {}
+		for i in range(0,n+1):
+			words_grams8[word][i] = {}
+			words_grams8[word][i]["nombre"] = 0
+	return words_grams8
+		
+def reset_grams(words,n):
 	words_grams	= {}
 	for j in range(0,8):
 		words_grams[j] = {}
@@ -204,14 +225,14 @@ def exe(words,k,n,protocol):
 	filenames = create_filenames(words,protocol,k)
 	cross_list = {}
 	for i in range(0,10):
-		cross_list[i] = {}
+		cross_list[i] = []
 		for j in range(0,20):
 			pos = random.randrange(200 - i*20 - j)
 			(file,word) = filenames.pop(pos)
-			cross_list[i][j] = (file,word)
+			cross_list[i].append((file,word))
 	words_grams	= {}
 	filenames = create_filenames(words,protocol,k)
-	words_grams = reset_grams(words_grams,words,n)
+	words_grams = reset_grams(words,n)
 	results = {}
 	for i in range(0,10):
 		results[i] = {}
@@ -229,21 +250,23 @@ def exe(words,k,n,protocol):
 			for l in range(0,8):
 				bestW = evaluating1(seq8[l],words_grams,n,l)
 				results[i][j][l] = bestW			
-		reset_grams(words_grams,words,n)
+		reset_grams(words,n)
 	return results
+	
+
 	
 def exe_vote(words,k,n,protocol):
 	filenames = create_filenames(words,protocol,k)
 	cross_list = {}
 	for i in range(0,10):
-		cross_list[i] = {}
+		cross_list[i] = []
 		for j in range(0,20):
 			pos = random.randrange(200 - i*20 - j)
 			(file,word) = filenames.pop(pos)
-			cross_list[i][j] = (file,word)
+			cross_list[i].append((file,word))
 	words_grams	= {}
 	filenames = create_filenames(words,protocol,k)
-	words_grams = reset_grams(words_grams,words,n)
+	words_grams = reset_grams(words,n)
 	results = {}
 	for i in range(0,10):
 		results[i] = {}
@@ -253,6 +276,7 @@ def exe_vote(words,k,n,protocol):
 				seq8 = read_seq1(filename)
 				for l in range(0,8):
 					counting1(seq8[l],words_grams,word,n+1,l)
+#		print(words_grams[1]["girl"][27])
 		for j in range(0,20):
 			results[i][j]= {}
 			(filename,word)= cross_list[i][j]
@@ -260,7 +284,7 @@ def exe_vote(words,k,n,protocol):
 			seq8 = read_seq1(filename)
 			bestW = voting(seq8,words_grams,n)
 			results[i][j]["resultat"] = bestW			
-		reset_grams(words_grams,words,n)
+		words_grams = reset_grams(words,n)
 	return results
 	
 words = ["come","girl","man","maybe","mine","name","read","right","science","thank"]
@@ -279,9 +303,9 @@ def print_results(res):
 	for i in range(0,10):
 		print ("beginning of cross test " + str(i))
 		for j in range(0,20):
-			print ("\n" + res[i][j]["original"] + "\n")
+			print ("\norigine: "+ res[i][j]["original"]+ " ::::::: ", end="")
 			for l in range(0,8):
-				print (str(res[i][j][l]) + "\n")
+				print (str(res[i][j][l]) + " - ", end="")
 				
 def compute_success(res):
 	total = 200
@@ -297,7 +321,7 @@ def compute_success(res):
 	
 def compute_success_rates(words,k,protocol):
 	success_rate = {}
-	for i in range (2,31):
+	for i in range (2,21):
 		success = compute_success(exe_vote(words,k,i,protocol))
 		success_rate[i] = success
 	print_dic(success_rate)
@@ -331,6 +355,8 @@ def find_best_param(words,n,protocol,numb_param):
 		res[i] = (bestP,bestG,bestB)
 	return res
 
+	
+	
 def create_confusion_matrix(words,results):
 	cm = {}
 	for wordi in words:
@@ -338,14 +364,14 @@ def create_confusion_matrix(words,results):
 		for wordj in words:
 			cm[wordi][wordj] = 0
 	for i in range(0,10):
-		for j in range(0.20):
+		for j in range(0,20):
 			cm[results[i][j]["original"]][results[i][j]["resultat"]] += 1
 	return cm
 	
 	
 def print_cm(words,cm):
 	first_line = "     "
-	for word in words
+	for word in words:
 		first_line += word +  " "
 	print(first_line)
 	for wordi in words:
@@ -355,17 +381,18 @@ def print_cm(words,cm):
 		print(line)
 
 			
-	
-#print_results(res)
+res = exe_vote(words,"2",29,"sax")
 #print_votes(res)
-#print(compute_success(res))
-
-#print_dic(find_best_param(words,15,"sax"))
-#print_dic(find_best_param(words,15,"hm",7))
-
-res = exe_vote(words,"2",5,"hm")
+#print_votes(res)
 print(compute_success(res))
 
+#print_dic(find_best_param(words,10,"sax",9))
+#print_dic(find_best_param(words,15,"hm",7))
+
+#res = exe_vote(words,"1",10,"hm")
+#print(compute_success(res))
+#cm = create_confusion_matrix(words,res)
+#print_cm(words,cm)
 
 
 #compute_success_rates(words,"0","sax")
