@@ -53,9 +53,9 @@ def initialize_grams():
 	grams = {k: {l: {} for l in words} for k in range(8)}
 	return grams
 
-def compting_grams(list_word_file, grams, nb_grams):
+def compting_grams(list_word_file, grams, nb_grams, protocol):
 	for word, file in list_word_file:
-		word_sequences = from_file_to_list("data/sax/" + file)
+		word_sequences = from_file_to_list("data/" + protocol + "/" + file)
 
 		for seq_number, sequence in enumerate(word_sequences):
 			for i in range(1, nb_grams+1):
@@ -86,9 +86,15 @@ def evaluate_word(sequence_grams, grams, word, n_gram, sequence_number):
 
 		for prefix in all_prefix:
 			if prefix in grams[sequence_number][word][len(prefix)]:
-				p *= grams[sequence_number][word][len(prefix)][prefix]/grams[sequence_number][word][len(prefix)-1][prefix[:-1]]
+				if len(prefix) == 1:
+					p *= grams[sequence_number][word][len(prefix)][prefix]/grams[sequence_number][word][len(prefix)]["total"]
+				else:
+					p *= grams[sequence_number][word][len(prefix)][prefix]/grams[sequence_number][word][len(prefix)-1][prefix[:-1]]
 			else:
-				p *= 1/grams[sequence_number][word][len(prefix)-1]["total"]
+				if len(prefix) == 1:
+					p *= 1/grams[sequence_number][word][len(prefix)]["total"]
+				else:
+					p *= 1/grams[sequence_number][word][len(prefix)-1]["total"]
 
 	return p
 
@@ -100,12 +106,11 @@ def evaluate_sequence(sequence_number, sequence, grams, n_gram):
 		gram = ""
 		for k in range(0, n_gram):
 			gram += sequence[j + k]
-			if k < n_gram - 1 and k and j==0:
+			if k < n_gram - 1 and j==0:
 				prefix.append(gram)
 
 		sequence_grams[gram] = prefix
 
-	print(sequence_grams)
 	guessed_word = None
 	max_probability = 0
 
@@ -118,8 +123,8 @@ def evaluate_sequence(sequence_number, sequence, grams, n_gram):
 
 	return guessed_word
 
-def voting(filename, grams, n_grams):
-	word_sequences = from_file_to_list("data/sax/" + filename)
+def voting(filename, grams, n_grams, protocol):
+	word_sequences = from_file_to_list("data/" + protocol + "/" + filename)
 
 	words_guessed = {}
 
@@ -151,12 +156,11 @@ def execution_with_vote(protocol, n_gram):
 	results = {k: {} for k in range(10)}
 
 	for i in range(0,10):
-		print(i, "th cross-validation")
 		grams = initialize_grams()
 
 		for j in range(0,10):
 			if j != i:
-				grams = compting_grams(cross_list[j], grams, n_gram)
+				grams = compting_grams(cross_list[j], grams, n_gram, protocol)
 
 		results[i] = {k: {} for k in range(20)}
 		for j in range(0, 20):
@@ -164,7 +168,7 @@ def execution_with_vote(protocol, n_gram):
 
 			results[i][j]["original"] = word
 
-			best_guess = voting(filename, grams, n_gram) # TODO
+			best_guess = voting(filename, grams, n_gram, protocol) # TODO
 
 			results[i][j]["result"] = best_guess
 
@@ -173,6 +177,13 @@ def execution_with_vote(protocol, n_gram):
 
 	return cpt_res
 
+import numpy as np
+
+for j in np.arange(0.05,0.3,0.05):
+	for i in range(5, 16):
+		moy = 0
+		for r in range(0,5):
+			moy += execution_with_vote("hm" + str(j), i)/200*100
+		print("hm",j," / ngrams ", i, " prob: ", moy/5)
 #print(create_cross_list("sax"))
-print(execution_with_vote("sax", 15)/200*100)
 #print(execution_with_vote("sax", 29)[0]["girl"][29])
